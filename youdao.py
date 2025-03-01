@@ -2,6 +2,7 @@
     # name: "有道云签到"
     # cron: 0 0,8 * * *
     # 更新时间:2025-03-01
+    # 变量YOUDAO_COOKIE=有道网页cookie
 
 import os
 import requests
