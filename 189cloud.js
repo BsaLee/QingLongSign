@@ -1,3 +1,5 @@
+// 变量TY_ACCOUNTS=手机号 密码 家庭;手机号 密码 家庭
+// 参数之间用空格分隔,账号间用:分隔
 const fs = require("fs");
 const { Cookie, CookieJar } = require("tough-cookie");
 const { CloudClient } = require("cloud189-sdk");
