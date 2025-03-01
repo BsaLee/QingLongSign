@@ -2,13 +2,13 @@
     # name: "同程旅行"
     # cron: 0 0,8 * * *
     # 更新时间:2025-03-01
-
+    # 变量名tongcheng=phone apptoken device    apptoken和device取自app - 我的 - 签到 -请求头同名值
 import requests
 from datetime import datetime
 import time
 import json
 import os
-# 变量名tongcheng=phone apptoken device@phone apptoken device
+
 # 允许多账号用@分隔
 # 从环境变量中读取账号信息
 def get_accounts_from_env():
