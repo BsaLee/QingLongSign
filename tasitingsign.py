@@ -1,8 +1,14 @@
+/*
+    name: "塔斯汀签到"
+    cron: 0 0,8 * * *
+    更新时间:2025-03-01
+# 青龙环境变量tasitingsign=手机号 user-token;手机号 user-token
+*/
 import requests
 import json
 import re
 import os
-# 青龙环境变量tasitingsign=手机号 user-token;手机号 user-token
+
 
 # 从青龙环境变量读取
 tasitingsign = os.getenv("tasitingsign")  # 获取青龙变量 tasitingsign
