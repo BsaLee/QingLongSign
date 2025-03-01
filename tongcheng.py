@@ -1,3 +1,8 @@
+/*
+    name: "同程旅行"
+    cron: 0 0,8 * * *
+    更新时间:2025-03-01
+*/
 import requests
 from datetime import datetime
 import time
