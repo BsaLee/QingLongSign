@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-File: tieba.py
-Author: WFRobert
-Date: 2023/3/9 15:01
-cron: 12 9 * * *
+/*
+    name: "百度贴吧"
+    cron: 0 0,8 * * *
+    更新时间:2025-03-01
+*/
 
-new Env('贴吧签到脚本');
-Description: 贴吧签到脚本,实现每日自动签到所有贴吧
-Update: 2023/9/1 更新cron
-fix 20240625 ArcadiaScriptPublic  频道：https://t.me/ArcadiaScript 群组：https://t.me/ArcadiaScriptPublic
-增加打印签到信息 更新cron
-"""
 import os
 import requests
 import hashlib
