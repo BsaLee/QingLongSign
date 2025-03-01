@@ -1,8 +1,8 @@
-/*
-    name: "有道云签到"
-    cron: 0 0,8 * * *
-    更新时间:2025-03-01
-*/
+
+    # name: "有道云签到"
+    # cron: 0 0,8 * * *
+    # 更新时间:2025-03-01
+
 import os
 import requests
 import json
