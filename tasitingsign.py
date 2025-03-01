@@ -2,7 +2,7 @@
     # name: "塔斯汀签到"
     # cron: 0 0,8 * * *
     # 更新时间:2025-03-01
-    # 青龙环境变量tasitingsign=手机号 user-token;手机号 user-token
+    # 青龙环境变量tasitingsign=手机号 user-token;手机号 user-token 和塔斯汀兑换共用变量
 
 import requests
 import json
