@@ -5,6 +5,8 @@
 */
 // 变量TY_ACCOUNTS=手机号 密码 家庭;手机号 密码 家庭
 // 参数之间用空格分隔,账号间用:分隔
+// 不记得账号密码的去https://cloud.189.cn/ 登录或者修改
+// 家庭id默认是家庭主账号的手机号,如果不是或者修改过,请到天翼云app -文件 -家庭共享 - 右上角家庭id点进去编辑
 const fs = require("fs");
 const { Cookie, CookieJar } = require("tough-cookie");
 const { CloudClient } = require("cloud189-sdk");
