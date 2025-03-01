@@ -1,10 +1,10 @@
-/*
-    name: "serv00保活"
-    cron: 0 0,8 * * *
-    更新时间:2025-03-01
+
+    # name: "serv00保活"
+    # cron: 0 0,8 * * *
+    # 更新时间:2025-03-01
     # 环境变量中设置SSH_INFO = host1 username1 password1@host2 username2 password2
     # 支持多账号,用@分隔
-*/
+
 import os
 import subprocess
 
