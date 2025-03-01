@@ -1,9 +1,9 @@
-/*
-    name: "顺丰速运"
-    cron: 0 0,8 * * *
-    更新时间:2025-03-01
-    多号换行，变量名：sfsyUrl=抓get请求的全部
-*/
+
+    # name: "顺丰速运"
+    # cron: 0 0,8 * * *
+    # 更新时间:2025-03-01
+    # 多号换行，变量名：sfsyUrl=抓get请求的全部
+
 
 # const $ = new Env('顺丰速运')
 import hashlib
