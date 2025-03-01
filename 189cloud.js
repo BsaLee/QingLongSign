@@ -1,5 +1,3 @@
-// 变量TY_ACCOUNTS=手机号 密码 家庭;手机号 密码 家庭
-// 参数之间用空格分隔,账号间用:分隔
 const fs = require("fs");
 const { Cookie, CookieJar } = require("tough-cookie");
 const { CloudClient } = require("cloud189-sdk");
@@ -28,27 +26,45 @@ const doUserTask = async (cloudClient, logger) => {
   );
 };
 
+// 直接通过环境变量设置家庭组
+const families = JSON.parse(process.env.TY_FAMILIES || "[]");
+
 // 家庭任务签到
-const doFamilyTask = async (cloudClient, logger, familyId) => {
+const doFamilyTask = async (cloudClient, logger) => {
   const { familyInfoResp } = await cloudClient.getFamilyList();
   if (familyInfoResp) {
-    const family = familyInfoResp.find((f) => f.familyId === familyId);
-    if (family) {
-      logger.info(`执行家庭签到ID:${familyId}`);
-      const tasks = Array.from({ length: execThreshold }, () =>
-        cloudClient.familyUserSign(familyId)
+    let familyId = null;
+    // 指定家庭签到
+    if (families.length > 0) {
+      const targetFamily = familyInfoResp.find((familyInfo) =>
+        families.includes(familyInfo.remarkName)
       );
-      const result = (await Promise.all(tasks)).filter((res) => !res.signStatus);
-      return logger.info(
-        `家庭签到任务: 成功数/总请求数 ${result.length}/${tasks.length} 获得 ${
-          result.map((res) => res.bonusSpace)?.join(",") || "0"
-        }M 空间`
-      );
+      if (targetFamily) {
+        familyId = targetFamily.familyId;
+      } else {
+        logger.error(
+          `没有加入到指定家庭分组${families
+            .map((family) => mask(family, 3, 7))
+            .toString()}`
+        );
+      }
     } else {
-      logger.error(`没有找到家庭组ID: ${familyId}`);
+      familyId = familyInfoResp[0].familyId;
     }
+    logger.info(`执行家庭签到ID:${familyId}`);
+    const tasks = Array.from({ length: execThreshold }, () =>
+      cloudClient.familyUserSign(familyId)
+    );
+    const result = (await Promise.all(tasks)).filter((res) => !res.signStatus);
+    return logger.info(
+      `家庭签到任务: 成功数/总请求数 ${result.length}/${tasks.length} 获得 ${
+        result.map((res) => res.bonusSpace)?.join(",") || "0"
+      }M 空间`
+    );
   }
 };
+
+
 
 const cookieDir = `.cookie/${new Date().toISOString().slice(0, 10)}`;
 
