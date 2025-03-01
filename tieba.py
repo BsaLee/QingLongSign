@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-/*
-    name: "百度贴吧"
-    cron: 0 0,8 * * *
-    更新时间:2025-03-01
-*/
+
+    # name: "百度贴吧"
+    # cron: 0 0,8 * * *
+    # 更新时间:2025-03-01
+
 
 import os
 import requests
