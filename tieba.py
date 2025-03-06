@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
     # name: "百度贴吧"
-    # cron: 0 0,8 * * *
+    # cron: 29 0,8 * * *
     # 更新时间:2025-03-01
     # 变量BDUSS=贴吧网页cookie中的BDUSS
 
