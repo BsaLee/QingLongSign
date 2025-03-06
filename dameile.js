@@ -1,6 +1,6 @@
 /*
     name: "达美乐披萨"
-    cron: 0 0,8 * * *
+    cron: 27 0,8 * * *
     更新时间:2025-03-01
     登录后玩一把游戏抽奖的时候抓包 https://game.dominos.com.cn/abalone/game/gameDone接口的body,填写到dlm_data,多账号用 @ 分割
 */
