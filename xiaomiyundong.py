@@ -1,9 +1,10 @@
 
     # name: "小米运动"
-    # cron: 0 8 * * *
+    # cron: 45 8 * * *
     # 更新时间:2025-03-03
     # 环境变量中设置xiaomi_yundong = user password;user2 password2
     # 支持多账号,用;分隔
+    # 应该叫华米运动刷步,app是zepp Life
 
 
 import requests
