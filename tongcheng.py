@@ -1,6 +1,6 @@
 
     # name: "同程旅行"
-    # cron: 0 0,8 * * *
+    # cron: 13 0,8 * * *
     # 更新时间:2025-03-01
     # 变量名tongcheng=phone apptoken device    apptoken和device取自app - 我的 - 签到 -请求头同名值
 import requests
