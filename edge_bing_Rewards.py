@@ -1,7 +1,7 @@
     # name: "edge刷积分"
-    # cron: 55 0,8 * * *
-    # 更新时间:2025-06-30
-    # 将多个账号的cookie按行分隔设置到 bing_ck 变量
+    # cron: 55 0,8,14,19 * * *
+    # 更新时间:2025-07-01
+    # 将多个账号的cookie按行分隔设置到 pc_cookies 和 mobile_cookies 变量
 
 
 import requests
@@ -13,18 +13,6 @@ import os
 from datetime import datetime, date
 from urllib.parse import urlparse, parse_qs
 
-# 尝试导入notify，失败则使用本地打印替代
-try:
-    import notify
-except ImportError:
-    class Notify:
-        def send(self, title, content):
-            print("\n--- [通知] ---")
-            print(f"标题: {title}")
-            print(f"内容:\n{content}")
-            print("----------------")
-    notify = Notify()
-
 def print_log(title: str, msg: str):
     """打印带时间戳的日志"""
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -33,22 +21,40 @@ def print_log(title: str, msg: str):
 # 从环境变量获取cookie，支持多行（一行一个）
 def get_cookies():
     """从环境变量获取cookie，支持多行（一行一个）"""
-    env_cookies = os.getenv("bing_ck")
-    if env_cookies:
+    # 获取电脑端cookie
+    pc_env_cookies = os.getenv("pc_cookies")
+    # 获取移动端cookie
+    mobile_env_cookies = os.getenv("mobile_cookies")
+    
+    pc_cookies_list = []
+    mobile_cookies_list = []
+    
+    if pc_env_cookies:
         # 分割多行cookie，去除空行和空白字符
-        cookies_list = [ck.strip() for ck in env_cookies.strip().split("\n") if ck.strip()]
-        return cookies_list
-    else:
-        print_log("配置错误", "未配置 bing_ck 环境变量，无法执行任务")
-        return []
+        pc_cookies_list = [ck.strip() for ck in pc_env_cookies.strip().split("\n") if ck.strip()]
+    
+    if mobile_env_cookies:
+        # 分割多行cookie，去除空行和空白字符
+        mobile_cookies_list = [ck.strip() for ck in mobile_env_cookies.strip().split("\n") if ck.strip()]
+    
+    # 检查cookie数量是否匹配
+    if len(pc_cookies_list) != len(mobile_cookies_list):
+        print_log("配置错误", f"电脑端cookie数量({len(pc_cookies_list)})与移动端cookie数量({len(mobile_cookies_list)})不匹配")
+        return [], []
+    
+    if not pc_cookies_list and not mobile_cookies_list:
+        print_log("配置错误", "未配置 pc_cookies 和 mobile_cookies 环境变量，无法执行任务")
+        return [], []
+    
+    return pc_cookies_list, mobile_cookies_list
 
 # 获取cookie列表
-cookies_list = get_cookies()
-if not cookies_list:
+pc_cookies_list, mobile_cookies_list = get_cookies()
+if not pc_cookies_list or not mobile_cookies_list:
     print_log("启动错误", "没有可用的cookie，程序退出")
     exit(1)
 
-print_log("初始化", f"检测到 {len(cookies_list)} 个账号，即将开始...")
+print_log("初始化", f"检测到 {len(pc_cookies_list)} 个账号，即将开始...")
 
 # 浏览器通用头部（将在运行时根据当前cookie动态设置）
 BROWSER_HEADERS = {
@@ -248,15 +254,36 @@ def get_dashboard_data(cookies):
         print_log('Dashboard错误', str(e))
         return None
 
-def complete_daily_set_tasks(cookies):
-    """完成每日活动任务"""
-    # print_log('每日活动', '--- 开始检查网页端每日活动 ---')
+def complete_daily_set_tasks(pc_cookies, mobile_cookies):
+    """完成每日活动任务，失败时自动切换到移动端cookie重试"""
     completed_count = 0
+    
+    # 首先尝试使用电脑端cookie
+    print_log("每日活动", "--- 使用电脑端cookie执行每日活动任务 ---")
+    result = _complete_daily_set_tasks_internal(pc_cookies)
+    completed_count += result['completed']
+    
+    # 如果有失败的任务，使用移动端cookie重试
+    if result['failed_tasks']:
+        print_log("每日活动", f"--- 使用移动端cookie重试 {len(result['failed_tasks'])} 个失败任务 ---")
+        retry_result = _complete_daily_set_tasks_internal(mobile_cookies, result['failed_tasks'])
+        completed_count += retry_result['completed']
+        
+        if retry_result['failed_tasks']:
+            print_log("每日活动", f"⚠️ 仍有 {len(retry_result['failed_tasks'])} 个任务失败")
+    
+    return completed_count
+
+def _complete_daily_set_tasks_internal(cookies, specific_tasks=None):
+    """内部函数：完成每日活动任务"""
+    completed_count = 0
+    failed_tasks = []
+    
     try:
         # 获取dashboard数据
         dashboard_result = get_dashboard_data(cookies)
         if not dashboard_result:
-            return completed_count
+            return {'completed': completed_count, 'failed_tasks': failed_tasks}
         
         dashboard_data = dashboard_result['dashboard_data']
         token = dashboard_result['token']
@@ -274,14 +301,19 @@ def complete_daily_set_tasks(cookies):
         
         if not daily_tasks:
             print_log("每日活动", "没有找到今日的每日活动任务")
-            return completed_count
+            return {'completed': completed_count, 'failed_tasks': failed_tasks}
         
         # 过滤未完成的任务
-        incomplete_tasks = [task for task in daily_tasks if not task.get('complete')]
+        if specific_tasks:
+            # 如果指定了特定任务，使用指定的任务列表
+            incomplete_tasks = specific_tasks
+        else:
+            # 否则过滤未完成的任务
+            incomplete_tasks = [task for task in daily_tasks if not task.get('complete')]
         
         if not incomplete_tasks:
             print_log("每日活动", "所有每日活动任务已完成")
-            return completed_count
+            return {'completed': completed_count, 'failed_tasks': failed_tasks}
         
         print_log("每日活动", f"找到 {len(incomplete_tasks)} 个未完成的每日活动任务")
         
@@ -294,6 +326,7 @@ def complete_daily_set_tasks(cookies):
                 print_log("每日活动", f"✅ 任务完成: {task.get('title', '未知任务')}")
             else:
                 print_log("每日活动", f"❌ 任务失败: {task.get('title', '未知任务')}")
+                failed_tasks.append(task)
             
             # 随机延迟
             time.sleep(random.uniform(2, 4))
@@ -303,7 +336,7 @@ def complete_daily_set_tasks(cookies):
     except Exception as e:
         print_log('每日活动出错', f"异常: {e}")
     
-    return completed_count
+    return {'completed': completed_count, 'failed_tasks': failed_tasks}
 
 def setup_task_headers(cookies):
     """设置任务执行的请求头"""
@@ -490,17 +523,37 @@ def execute_task(task, token, cookies):
         print_log("更多活动", f"❌ 执行任务时出错: {e}")
         return False
 
-def complete_more_activities(cookies):
-    """完成更多活动任务"""
-    # print_log('更多活动', '--- 开始检查更多活动 ---')
+def complete_more_activities(pc_cookies, mobile_cookies):
+    """完成更多活动任务，失败时自动切换到移动端cookie重试"""
     completed_count = 0
+    
+    # 首先尝试使用电脑端cookie
+    print_log("更多活动", "--- 使用电脑端cookie执行更多活动任务 ---")
+    result = _complete_more_activities_internal(pc_cookies)
+    completed_count += result['completed']
+    
+    # 如果有失败的任务，使用移动端cookie重试
+    if result['failed_tasks']:
+        print_log("更多活动", f"--- 使用移动端cookie重试 {len(result['failed_tasks'])} 个失败任务 ---")
+        retry_result = _complete_more_activities_internal(mobile_cookies, result['failed_tasks'])
+        completed_count += retry_result['completed']
+        
+        if retry_result['failed_tasks']:
+            print_log("更多活动", f"⚠️ 仍有 {len(retry_result['failed_tasks'])} 个任务失败")
+    
+    return completed_count
+
+def _complete_more_activities_internal(cookies, specific_tasks=None):
+    """内部函数：完成更多活动任务"""
+    completed_count = 0
+    failed_tasks = []
     
     try:
         # 获取dashboard数据
         dashboard_result = get_dashboard_data(cookies)
         if not dashboard_result:
             print_log("更多活动", "无法获取dashboard数据，跳过更多活动\n")
-            return completed_count
+            return {'completed': completed_count, 'failed_tasks': failed_tasks}
         
         dashboard_data = dashboard_result['dashboard_data']
         token = dashboard_result['token']
@@ -513,12 +566,17 @@ def complete_more_activities(cookies):
             print_log("更多活动", f"✅ 当前积分: {available_points}, 总积分: {lifetime_points}")
         
         # 提取更多活动任务
-        more_promotions = dashboard_data.get('morePromotions', [])
-        tasks = extract_tasks(more_promotions)
+        if specific_tasks:
+            # 如果指定了特定任务，使用指定的任务列表
+            tasks = specific_tasks
+        else:
+            # 否则从dashboard数据中提取任务
+            more_promotions = dashboard_data.get('morePromotions', [])
+            tasks = extract_tasks(more_promotions)
         
         if not tasks:
             print_log("更多活动", "没有找到可执行的更多活动任务\n")
-            return completed_count
+            return {'completed': completed_count, 'failed_tasks': failed_tasks}
         
         print_log("更多活动", f"找到 {len(tasks)} 个可执行的更多活动任务")
         
@@ -531,6 +589,7 @@ def complete_more_activities(cookies):
                 print_log("更多活动", f"✅ 任务完成: {task.get('title', '未知任务')}")
             else:
                 print_log("更多活动", f"❌ 任务失败: {task.get('title', '未知任务')}")
+                failed_tasks.append(task)
             
             # 随机延迟
             time.sleep(random.uniform(2, 4))
@@ -540,7 +599,7 @@ def complete_more_activities(cookies):
     except Exception as e:
         print_log('更多活动出错', f"异常: {e}\n")
     
-    return completed_count
+    return {'completed': completed_count, 'failed_tasks': failed_tasks}
 
 def perform_search_tasks(search_type, search_func, max_count, initial_points, cookies, check_interval=3):
     """执行搜索任务的通用函数"""
@@ -575,13 +634,13 @@ def perform_search_tasks(search_type, search_func, max_count, initial_points, co
         count = 0
     return count
 
-def single_account_main(cookies, account_index):
+def single_account_main(pc_cookies, mobile_cookies, account_index):
     """单个账号的完整任务流程"""
     print(f"\n{'='*15} [开始处理账号 {account_index}] {'='*15}")
     
-    # 1. 查询初始积分和账号信息
+    # 1. 查询初始积分和账号信息（使用电脑端cookie查询）
     print_log("账号信息", "---查询账号信息和初始积分 ---")
-    initial_data = get_rewards_points(cookies)
+    initial_data = get_rewards_points(pc_cookies)
     if initial_data is None or initial_data['points'] is None:
         print_log("账号信息", "无法获取初始积分，跳过此账号")
         return None
@@ -590,82 +649,72 @@ def single_account_main(cookies, account_index):
     email = initial_data.get('email', '未知邮箱')
     print_log("账号信息", f"账号: {email}, 初始积分: {script_start_points}")
     
-    # 2. 执行电脑搜索
-    pc_count = perform_search_tasks("电脑搜索", bing_search_pc, 30, script_start_points, cookies)
+    # 2. 执行电脑搜索（使用电脑端cookie）
+    pc_count = perform_search_tasks("电脑搜索", bing_search_pc, 30, script_start_points, pc_cookies)
     
     # 获取电脑搜索完成后的积分，作为移动搜索的基准
-    pc_completed_points = get_rewards_points(cookies)
+    pc_completed_points = get_rewards_points(pc_cookies)
     mobile_start_points = pc_completed_points['points'] if pc_completed_points else script_start_points
     
-    # 3. 执行移动设备搜索
-    mobile_count = perform_search_tasks("移动搜索", bing_search_mobile, 20, mobile_start_points, cookies)
+    # 3. 执行移动设备搜索（使用移动端cookie）
+    mobile_count = perform_search_tasks("移动搜索", bing_search_mobile, 20, mobile_start_points, mobile_cookies)
     
-    # 4. 执行每日活动任务
+    # 4. 执行每日活动任务（支持重试机制）
     print_log("每日活动", "--- 开始执行每日活动任务 ---")
-    daily_tasks_completed = complete_daily_set_tasks(cookies)
-    # print_log("每日活动", f"完成每日活动任务，完成任务数: {daily_tasks_completed}")
+    daily_tasks_completed = complete_daily_set_tasks(pc_cookies, mobile_cookies)
     
-    # 5. 执行更多活动任务
+    # 5. 执行更多活动任务（支持重试机制）
     print_log("更多活动", "--- 开始执行更多活动任务 ---")
-    more_activities_completed = complete_more_activities(cookies)
-    # print_log("更多活动", f"完成更多活动任务，完成任务数: {more_activities_completed}")
+    more_activities_completed = complete_more_activities(pc_cookies, mobile_cookies)
     
-    # 6. 最终积分查询
-    final_data = get_rewards_points(cookies)
+    # 6. 最终积分查询（使用电脑端cookie）
+    final_data = get_rewards_points(pc_cookies)
     
     if final_data and final_data['points'] is not None:
         final_points = final_data['points']
         points_earned = final_points - script_start_points
         print_log("脚本完成", f"最终积分: {final_points} (+{points_earned})")
         
-        # 生成账号总结
-        summary = (
-            f"账号: {email}\n"
-            f"✨ 积分变化: {script_start_points} -> {final_points} (+{points_earned})\n"
-            f"✨ 电脑搜索: {pc_count} 次\n"
-            f"✨ 移动搜索: {mobile_count} 次\n"
-            f"✨ 每日活动: {daily_tasks_completed} 个\n"
-            f"✨ 更多活动: {more_activities_completed} 个"
-        )
+        # 打印账号总结
+        print(f"\n{'='*10} [账号 {account_index} 任务完成] {'='*10}")
+        print(f"账号: {email}")
+        print(f"✨ 积分变化: {script_start_points} -> {final_points} (+{points_earned})")
+        print(f"✨ 电脑搜索: {pc_count} 次")
+        print(f"✨ 移动搜索: {mobile_count} 次")
+        print(f"✨ 每日活动: {daily_tasks_completed} 个")
+        print(f"✨ 更多活动: {more_activities_completed} 个")
+        print("="*50)
         
-        return summary
+        return True
     else:
         print_log("脚本完成", "无法获取最终积分")
-        return None
+        return False
 
 def main():
-    """主函数 - 支持多账号执行和推送"""
-    all_summaries = []
+    """主函数 - 支持多账号执行"""
+    successful_accounts = 0
     
-    for i, cookies in enumerate(cookies_list, 1):
+    for i in range(len(pc_cookies_list)):
         try:
-            summary = single_account_main(cookies, i)
-            if summary:
-                all_summaries.append(summary)
+            pc_cookies = pc_cookies_list[i]
+            mobile_cookies = mobile_cookies_list[i]
+            
+            if single_account_main(pc_cookies, mobile_cookies, i + 1):
+                successful_accounts += 1
             
             # 账号间延迟（除了最后一个账号）
-            if i < len(cookies_list):
+            if i < len(pc_cookies_list) - 1:
                 wait_time = random.randint(20, 40)
                 print_log("账号切换", f"等待 {wait_time}s 后继续...")
                 time.sleep(wait_time)
                 
         except Exception as e:
-            print_log(f"账号{i}错误", f"处理账号时发生异常: {e}")
+            print_log(f"账号{i+1}错误", f"处理账号时发生异常: {e}")
             continue
     
-    # --- 统一推送 ---
+    # 最终总结
     print(f"\n\n{'='*10} [全部任务完成] {'='*10}")
-    if all_summaries:
-        print_log("统一推送", "准备发送所有账号的总结报告...")
-        try:
-            title = f"Microsoft Rewards 任务总结 ({date.today().strftime('%Y-%m-%d')})"
-            content = "\n\n".join(all_summaries)
-            notify.send(title, content)
-            print_log("推送成功", "总结报告已发送。")
-        except Exception as e:
-            print_log("推送失败", f"发送总结报告时出错: {e}")
-    else:
-        print_log("统一推送", "没有可供推送的账号信息。")
+    print_log("任务总结", f"成功处理 {successful_accounts}/{len(pc_cookies_list)} 个账号")
 
 if __name__ == "__main__":
     main() 
