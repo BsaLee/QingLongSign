@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
     # name: "0点电信权益"
-    # cron: 55 24 * * *
+    # cron: 55 23 * * *
     # 更新时间:2025-07-010
     # 设置变量chinaTelecomAccount
 import os
