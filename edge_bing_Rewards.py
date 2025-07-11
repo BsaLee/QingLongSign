@@ -1,12 +1,13 @@
 """
     # name: "edge刷积分"
     # 更新时间:2025-07-01
+    # cron: 10 0-20 * * *
 🎯 Bing Rewards 自动化脚本 - 多账号支持版-v1.0
 变量名：bing_ck  多账号换行 
 如果执行的发现积分不增长，且脚本上显示的积分跟实际不符，很有可能不是同一个账号的cookie，建议重新抓取。
 From:yaohuo28507
 
-cron: 10 0-20 * * *
+
 """
 import requests
 import random
