@@ -504,7 +504,19 @@ async def main(timeDiff, isTRUE, hour):
         print_error("错误: 未设置 chinaTelecomAccount 环境变量，请配置为 账号#密码 格式")
         return
     
-    phone_list = PHONES.split('&')
+    # 支持多种分隔符：& 和换行符
+    phone_list = []
+    for separator in ['&', '\n', '\r\n']:
+        if separator in PHONES:
+            phone_list = PHONES.split(separator)
+            break
+    else:
+        # 如果没有找到分隔符，就当作单个账号处理
+        phone_list = [PHONES]
+    
+    # 过滤空字符串
+    phone_list = [phone.strip() for phone in phone_list if phone.strip()]
+    
     print_info(f"检测到 {len(phone_list)} 个账号将参与抢话费")
     
     for phoneV in phone_list:
